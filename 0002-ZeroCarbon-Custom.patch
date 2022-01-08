@@ -1,6 +1,6 @@
-From 70bbb96102253b8c325953c27077ae761a959fdb Mon Sep 17 00:00:00 2001
+From 17f08d25f56c0fbdcf0f232fdcf66581c986be8f Mon Sep 17 00:00:00 2001
 From: hayashi <hayashi@nds-osk.co.jp>
-Date: Fri, 7 Jan 2022 19:11:31 +0900
+Date: Sat, 8 Jan 2022 09:47:51 +0900
 Subject: [PATCH 2/2] ZeroCarbon-Custom
 
 ---
@@ -23,6 +23,10 @@ Subject: [PATCH 2/2] ZeroCarbon-Custom
  an4950_gpio_re_256kb.eww                      |    7 +
  battery.c                                     |  113 +
  battery.h                                     |   16 +
+ boards/EK-RE01_256KB/EK-RE01_256KB-board.c    |   51 +
+ boards/EK-RE01_256KB/EK-RE01_256KB-board.h    |    8 +
+ boards/EK-RE01_256KB/lpm-board.h              |  148 ++
+ boards/EK-RE01_256KB/r_rtc.h                  |   78 +
  config_mode.h                                 |   92 +
  configuration.h                               |  149 ++
  hs300x.c                                      |  108 +-
@@ -47,7 +51,7 @@ Subject: [PATCH 2/2] ZeroCarbon-Custom
  transceiver_rtc.h                             |   21 +
  transceiver_wifi_scan.c                       |  575 ++++
  transceiver_wifi_scan.h                       |   91 +
- 43 files changed, 10271 insertions(+), 1900 deletions(-)
+ 47 files changed, 10556 insertions(+), 1900 deletions(-)
  create mode 100644 .settings/org.eclipse.cdt.managedbuilder.core.prefs
  create mode 100644 LR1110_GNSS_256KB HardwareDebug.jlink
  create mode 100644 LR1110_GNSS_256KB_Driver HardwareDebug.jlink
@@ -63,6 +67,10 @@ Subject: [PATCH 2/2] ZeroCarbon-Custom
  create mode 100644 an4950_gpio_re_256kb.eww
  create mode 100644 battery.c
  create mode 100644 battery.h
+ create mode 100644 boards/EK-RE01_256KB/EK-RE01_256KB-board.c
+ create mode 100644 boards/EK-RE01_256KB/EK-RE01_256KB-board.h
+ create mode 100644 boards/EK-RE01_256KB/lpm-board.h
+ create mode 100644 boards/EK-RE01_256KB/r_rtc.h
  create mode 100644 config_mode.h
  create mode 100644 configuration.h
  create mode 100644 isl9122.c
@@ -1504,14 +1512,14 @@ index e743e0d..8a4f698 100644
  	<projects>
  	</projects>
 diff --git a/.settings/e2studio_project.prefs b/.settings/e2studio_project.prefs
-index 626484b..5a53ff3 100644
+index 626484b..bceb3db 100644
 --- a/.settings/e2studio_project.prefs
 +++ b/.settings/e2studio_project.prefs
 @@ -1,3 +1,2 @@
  #
 -#Wed Feb 24 16:54:05 JST 2021
 -activeConfiguration=com.renesas.cdt.managedbuild.assp.configuration.debug.1985650983
-+#Thu Jan 06 17:54:28 JST 2022
++#Fri Jan 07 20:50:49 JST 2022
 diff --git a/.settings/language.settings.xml b/.settings/language.settings.xml
 index 9f38666..6631b35 100644
 --- a/.settings/language.settings.xml
@@ -6851,6 +6859,315 @@ index 0000000..62b5b6d
 +void battery_read(uint16_t * val);
 +
 +#endif /* BATTERY_H_ */
+diff --git a/boards/EK-RE01_256KB/EK-RE01_256KB-board.c b/boards/EK-RE01_256KB/EK-RE01_256KB-board.c
+new file mode 100644
+index 0000000..ca6de1e
+--- /dev/null
++++ b/boards/EK-RE01_256KB/EK-RE01_256KB-board.c
+@@ -0,0 +1,51 @@
++/*!
++ * \file      rtk70e017dc01000bj-board.c
++ *
++ * \brief     Target board <RENESAS RTK70E017DC01000BJ + RTK70E017DB00000BJ> driver implementation
++ *
++ * \copyright Revised BSD License, see section \ref LICENSE.
++ *
++ * \code
++ *                ______                              _
++ *               / _____)             _              | |
++ *              ( (____  _____ ____ _| |_ _____  ____| |__
++ *               \____ \| ___ |    (_   _) ___ |/ ___)  _ \
++ *               _____) ) ____| | | || |_| ____( (___| | | |
++ *              (______/|_____)_|_|_| \__)_____)\____)_| |_|
++ *              (C)2013-2017 Semtech
++ *
++ * \endcode
++ *
++ * \author    Miguel Luis ( Semtech )
++ *
++ * \author    Gregory Cristian ( Semtech )
++ */
++//#include "board-config.h"
++#include "RE01_256KB.h"
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <math.h>
++
++#include "r_system_api.h"
++
++//#include "utilities.h"
++//#include "board.h"
++//#include "delay.h"
++//#include "radio.h"
++//#include "sx126x-board.h"
++
++/*!
++ * Antenna switch GPIO pins objects
++ */
++
++//void lr1110_modem_board_lna_on( void ) { lna_on( ); }
++
++//void lr1110_modem_board_lna_off( void ) { lna_off( ); }
++
++//void HAL_Delay(uint32_t Delay)
++//{
++//	R_SYS_SoftwareDelay(Delay, SYSTEM_DELAY_UNITS_MILLISECONDS);
++//}
++
++/* End of file (rtk70e017dc01000bj-board.c) */
+diff --git a/boards/EK-RE01_256KB/EK-RE01_256KB-board.h b/boards/EK-RE01_256KB/EK-RE01_256KB-board.h
+new file mode 100644
+index 0000000..1539d39
+--- /dev/null
++++ b/boards/EK-RE01_256KB/EK-RE01_256KB-board.h
+@@ -0,0 +1,8 @@
++
++#ifndef _EKRE01_256KB_
++#define _EKRE01_256KB_
++
++void HAL_Delay(uint32_t Delay);
++
++
++#endif
+diff --git a/boards/EK-RE01_256KB/lpm-board.h b/boards/EK-RE01_256KB/lpm-board.h
+new file mode 100644
+index 0000000..451d559
+--- /dev/null
++++ b/boards/EK-RE01_256KB/lpm-board.h
+@@ -0,0 +1,148 @@
++/*!
++ * \file      lpm-board.h
++ *
++ * \brief     Target board low power modes management
++ *
++ * \copyright Revised BSD License, see section \ref LICENSE.
++ *
++ * \code
++ *                ______                              _
++ *               / _____)             _              | |
++ *              ( (____  _____ ____ _| |_ _____  ____| |__
++ *               \____ \| ___ |    (_   _) ___ |/ ___)  _ \
++ *               _____) ) ____| | | || |_| ____( (___| | | |
++ *              (______/|_____)_|_|_| \__)_____)\____)_| |_|
++ *              (C)2013-2017 Semtech - STMicroelectronics
++ *
++ * \endcode
++ *
++ * \author    Miguel Luis ( Semtech )
++ *
++ * \author    Gregory Cristian ( Semtech )
++ *
++ * \author    MCD Application Team (C)( STMicroelectronics International )
++ */
++#ifndef __LPM_BOARD_H__
++#define __LPM_BOARD_H__
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++#include "board-config.h"
++
++/*!
++ * Low power manager configuration
++ */
++typedef enum
++{
++    LPM_APPLI_ID   =                                ( 1 << 0 ),
++    LPM_LIB_ID     =                                ( 1 << 1 ),
++    LPM_RTC_ID     =                                ( 1 << 2 ),
++    LPM_GPS_ID     =                                ( 1 << 3 ),
++    LPM_UART_RX_ID =                                ( 1 << 4 ),
++    LPM_UART_TX_ID =                                ( 1 << 5 ),
++} LpmId_t;
++
++/*!
++ * Low Power Mode selected
++ */
++typedef enum
++{
++    LPM_ENABLE = 0,
++    LPM_DISABLE,
++} LpmSetMode_t;
++
++typedef enum
++{
++    LPM_SLEEP_MODE,
++    LPM_STANDBY_MODE,
++    LPM_OFF_MODE,
++} LpmGetMode_t;
++
++#define LPM_FUNC_LOCATION __attribute__ ((section(".ramfunc")))
++
++/*!
++ * \brief  This API returns the Low Power Mode selected that will be applied when the system will enter low power mode
++ *         if there is no update between the time the mode is read with this API and the time the system enters
++ *         low power mode.
++ *
++ * \retval mode Selected low power mode
++ */
++LpmGetMode_t LpmGetMode( void ) LPM_FUNC_LOCATION;
++
++/*!
++ * \brief  This API notifies the low power manager if the specified user allows the standby mode or not.
++ *         When the application does not require the system clock, it enters standby mode if at least one user disallow
++ *         Off Mode. Otherwise, it enters Off Mode.
++ *         The default mode selection for all users is Off mode enabled
++ *
++ * \param [IN] id   Process Id
++ * \param [IN] mode Selected mode
++ */
++void LpmSetLowPowerMode( LpmId_t id, LpmSetMode_t mode ) LPM_FUNC_LOCATION;
++
++/*!
++ * \brief  This API notifies the low power manager if the specified user allows the Off mode or not.
++ *         When the application does not require the system clock, it enters Stop Mode if at least one user disallow
++ *         Off Mode. Otherwise, it enters Off Mode.
++ *         The default mode selection for all users is Off mode enabled
++ *
++ * \param [IN] id   Process Id
++ * \param [IN] mode Selected mode
++ */
++void LpmSetOffMode(LpmId_t id, LpmSetMode_t mode ) LPM_FUNC_LOCATION;
++
++/*!
++ * \brief  This API shall be used by the application when there is no more code to execute so that the system may
++ *         enter low-power mode. The mode selected depends on the information received from LpmOffModeSelection( ) and
++ *         LpmSysclockRequest( )
++ *         This function shall be called in critical section
++ */
++void LpmEnterLowPower( void ) LPM_FUNC_LOCATION;
++
++/*!
++ * \brief  This API is called by the low power manager in a critical section (PRIMASK bit set) to allow the
++ *         application to implement dedicated code before entering Sleep Mode
++ */
++void LpmEnterSleepMode( void ) LPM_FUNC_LOCATION;
++
++/*!
++ * \brief  This API is called by the low power manager in a critical section (PRIMASK bit set) to allow the
++ *         application to implement dedicated code before getting out from Sleep Mode
++ */
++void LpmExitSleepMode( void ) LPM_FUNC_LOCATION;
++
++/*!
++ * \brief  This API is called by the low power manager in a critical section (PRIMASK bit set) to allow the
++ *         application to implement dedicated code before entering Standby Mode
++ */
++void LpmEnterStandbyMode( void ) LPM_FUNC_LOCATION;
++
++/*!
++ * \brief  This API is called by the low power manager in a critical section (PRIMASK bit set) to allow the
++ *         application to implement dedicated code before getting out from Standby Mode. This is where the
++ *         application should reconfigure the clock tree when needed
++ */
++void LpmExitStandbyMode( void ) LPM_FUNC_LOCATION;
++
++/*!
++ * \brief  This API is called by the low power manager in a critical section (PRIMASK bit set) to allow the
++ *         application to implement dedicated code before entering Off mode. This is where the application could save
++ *         data in the retention memory as the RAM memory content will be lost
++ */
++void LpmEnterOffMode( void ) LPM_FUNC_LOCATION;
++
++/*!
++ * @brief  This API is called by the low power manager in a critical section (PRIMASK bit set) to allow the
++ *         application to implement dedicated code before getting out from Off mode. This can only happen when the
++ *         Off mode is finally not entered. In that case, the application may reverse some configurations done before
++ *         entering Off mode. When Off mode is successful, the system is reset when getting out from this low-power mode
++ */
++void LpmExitOffMode( void ) LPM_FUNC_LOCATION;
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif /*__LPM_BOARD_H__ */
+diff --git a/boards/EK-RE01_256KB/r_rtc.h b/boards/EK-RE01_256KB/r_rtc.h
+new file mode 100644
+index 0000000..d5a550a
+--- /dev/null
++++ b/boards/EK-RE01_256KB/r_rtc.h
+@@ -0,0 +1,78 @@
++/**********************************************************************************************************************
++* File Name    : r_rtc.h
++* Description  : Function declaration of the RTC module driver on Renesas RE01 MCUs
++**********************************************************************************************************************/
++
++#ifndef R_RTC_H_
++#define R_RTC_H_
++
++#include "r_system_api.h"
++
++#define RTC_COUNTER_STOP        (0)
++#define RTC_COUNTER_START       (1)
++#define RTC_DUMMY_READ          (3)
++#define RTC_INT_ENABLE          (0x07)
++
++typedef void (*RTC_Event_t) (uint16_t event);
++
++typedef enum e_rtc_periodic
++{
++    RTC_PERIODIC_OFF    = 0,
++    RTC_PERIODIC_256_HZ = 6,
++    RTC_PERIODIC_128_HZ = 7,
++    RTC_PERIODIC_64_HZ  = 8,
++    RTC_PERIODIC_32_HZ  = 9,
++    RTC_PERIODIC_16_HZ  = 10,
++    RTC_PERIODIC_8_HZ   = 11,
++    RTC_PERIODIC_4_HZ   = 12,
++    RTC_PERIODIC_2_HZ   = 13,
++    RTC_PERIODIC_1_HZ   = 14,
++    RTC_PERIODIC_2_SEC  = 15,
++} rtc_periodic_t;
++
++#if (!defined(_TIME_H) && !defined(__time_h__))
++typedef struct
++{
++    int tm_sec;     /* Seconds (0-59) */
++    int tm_min;     /* Minute (0-59) */
++    int tm_hour;    /* Hour (0-23) */
++    int tm_mday;    /* Day of the month (1-31) */
++    int tm_mon;     /* Month (0-11, 0=January) */
++    int tm_year;    /* Year since 1900 (100-199, 100=2000)*/
++    int tm_wday;    /* Day of the week (0-6, 0=Sunday) */
++    int tm_yday;    /* Day of the year (0-365) */
++    int tm_isdst;   /* Daylight Savings enabled (>0), disabled (=0), or unknown (<0)*/
++} tm_t;
++#endif
++
++typedef struct
++{
++    uint8_t     int_priority;       // INT priority; 0=disable, 1=low, 15=high
++
++    /* set to true to cause alarm when all enabled alarm fields match current time */
++    bool        sec;
++    bool        min;
++    bool        hour;
++    bool        wday;
++    bool        mday;
++    bool        mon;
++    bool        year;
++} rtc_alarm_ctrl_t;
++
++void rtc_init (RTC_Event_t event_cb);
++void rtc_set_periodic (rtc_periodic_t freq, uint8_t priority);
++void rtc_set_current_time (tm_t * p_current);
++void rtc_set_alarm_time (tm_t *p_alarm);
++void rtc_enable_alarms (rtc_alarm_ctrl_t *p_alm_ctrl);
++void rtc_disable_alarms(void);
++void rtc_read_alarm (tm_t *p_alarm);
++void rtc_read_current (tm_t *p_current);
++void rtc_counter_run (const uint8_t action);
++void rtc_reset (void);
++void rtc_enable_ints (void);
++void rtc_disable_ints (void);
++uint32_t hal_rtc_get_time_ms(void);
++void rtc_prepare(void);
++
++
++#endif /* R_RTC_H_ */
 diff --git a/config_mode.h b/config_mode.h
 new file mode 100644
 index 0000000..48d8bda
