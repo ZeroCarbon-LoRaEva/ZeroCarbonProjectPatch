@@ -1,7 +1,7 @@
-From 17f08d25f56c0fbdcf0f232fdcf66581c986be8f Mon Sep 17 00:00:00 2001
+From 24054119a789651eea3da13dd607d1dcb44ae020 Mon Sep 17 00:00:00 2001
 From: hayashi <hayashi@nds-osk.co.jp>
-Date: Sat, 8 Jan 2022 09:47:51 +0900
-Subject: [PATCH 2/2] ZeroCarbon-Custom
+Date: Tue, 15 Feb 2022 15:56:30 +0900
+Subject: [PATCH] ZeroCarbon-Custom
 
 ---
  .cproject                                     | 1398 +++++++---
@@ -45,13 +45,13 @@ Subject: [PATCH 2/2] ZeroCarbon-Custom
  transceiver_gnss.h                            |   45 +
  transceiver_power.c                           |   97 +
  transceiver_power.h                           |   23 +
- transceiver_radio.c                           |  410 +++
+ transceiver_radio.c                           |  411 +++
  transceiver_radio.h                           |   34 +
  transceiver_rtc.c                             |  161 ++
  transceiver_rtc.h                             |   21 +
  transceiver_wifi_scan.c                       |  575 ++++
  transceiver_wifi_scan.h                       |   91 +
- 47 files changed, 10556 insertions(+), 1900 deletions(-)
+ 47 files changed, 10557 insertions(+), 1900 deletions(-)
  create mode 100644 .settings/org.eclipse.cdt.managedbuilder.core.prefs
  create mode 100644 LR1110_GNSS_256KB HardwareDebug.jlink
  create mode 100644 LR1110_GNSS_256KB_Driver HardwareDebug.jlink
@@ -11782,10 +11782,10 @@ index 0000000..df0f37b
 +#endif
 diff --git a/transceiver_radio.c b/transceiver_radio.c
 new file mode 100644
-index 0000000..7be7968
+index 0000000..c6f8e99
 --- /dev/null
 +++ b/transceiver_radio.c
-@@ -0,0 +1,410 @@
+@@ -0,0 +1,411 @@
 +/**
 + * @file      transceiver_radio.c
 + *
@@ -11967,12 +11967,13 @@ index 0000000..7be7968
 +
 +	pa_configuration.pa_sel           = LR1110_RADIO_PA_SEL_LP;  // =DEMO_RADIO_PA_SEL_DEFAULT; Low-power Power Amplifier
 +	pa_configuration.pa_reg_supply    = LR1110_RADIO_PA_REG_SUPPLY_VREG; // = DEMO_RADIO_PA_REG_SUPPLY_DEFAULT;  Power amplifier supplied by the main regulator
-+//	pa_configuration.pa_duty_cycle    = DEMO_RADIO_PA_DUTY_CYCLE_DEFAULT; // = 4
-+	pa_configuration.pa_duty_cycle    = DEMO_RADIO_PA_DUTY_CYCLE_DOWN; // = 2
++	pa_configuration.pa_duty_cycle    = DEMO_RADIO_PA_DUTY_CYCLE_DEFAULT; // = 4
++//	pa_configuration.pa_duty_cycle    = DEMO_RADIO_PA_DUTY_CYCLE_DOWN; // = 2
 +	pa_configuration.pa_hp_sel        = DEMO_RADIO_PA_HP_SEL_DEFAULT; // = 0
 +	modem_result = lr1110_radio_set_pa_cfg( &lr1110, &pa_configuration );
 +
-+	modem_result=    lr1110_radio_set_tx_params( &lr1110, DEMO_RADIO_TX_POWER_DEFAULT, LR1110_RADIO_RAMP_240_US );
++//	modem_result=    lr1110_radio_set_tx_params( &lr1110, DEMO_RADIO_TX_POWER_DEFAULT, LR1110_RADIO_RAMP_240_US );
++	modem_result=    lr1110_radio_set_tx_params( &lr1110, DEMO_RADIO_TX_POWER_DOWN,    LR1110_RADIO_RAMP_80_US );
 +    modem_result =     lr1110_system_set_dio_irq_params(&lr1110,
 +     LR1110_SYSTEM_IRQ_GNSS_SCAN_DONE | LR1110_SYSTEM_IRQ_TX_DONE | LR1110_SYSTEM_IRQ_RX_DONE | LR1110_SYSTEM_IRQ_TIMEOUT, 0 );
 +    modem_result =    lr1110_system_clear_irq_status( &lr1110, LR1110_SYSTEM_IRQ_ALL_MASK );
