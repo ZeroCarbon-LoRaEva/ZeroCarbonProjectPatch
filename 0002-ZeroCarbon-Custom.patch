@@ -1,8 +1,9 @@
-From 24054119a789651eea3da13dd607d1dcb44ae020 Mon Sep 17 00:00:00 2001
+From 363d0e5977ea26cadab803b474ed097a5c47bff7 Mon Sep 17 00:00:00 2001
 From: hayashi <hayashi@nds-osk.co.jp>
 Date: Tue, 15 Feb 2022 15:56:30 +0900
-Subject: [PATCH] ZeroCarbon-Custom
+Subject: [PATCH] Wifi AP design change & error repair
 
+ZeroCarbon-Custom
 ---
  .cproject                                     | 1398 +++++++---
  .project                                      |    2 +-
@@ -38,7 +39,7 @@ Subject: [PATCH] ZeroCarbon-Custom
  lr1110_firmware_update.c                      |  249 ++
  lr1110_firmware_update.h                      |   88 +
  lr1110_modem_common.h                         |  131 +
- main.c                                        | 2314 ++++++-----------
+ main.c                                        | 2310 ++++++-----------
  transceiver_almanac.c                         |  263 ++
  transceiver_almanac.h                         |   27 +
  transceiver_gnss.c                            |  336 +++
@@ -49,9 +50,9 @@ Subject: [PATCH] ZeroCarbon-Custom
  transceiver_radio.h                           |   34 +
  transceiver_rtc.c                             |  161 ++
  transceiver_rtc.h                             |   21 +
- transceiver_wifi_scan.c                       |  575 ++++
+ transceiver_wifi_scan.c                       |  612 +++++
  transceiver_wifi_scan.h                       |   91 +
- 47 files changed, 10557 insertions(+), 1900 deletions(-)
+ 47 files changed, 10588 insertions(+), 1902 deletions(-)
  create mode 100644 .settings/org.eclipse.cdt.managedbuilder.core.prefs
  create mode 100644 LR1110_GNSS_256KB HardwareDebug.jlink
  create mode 100644 LR1110_GNSS_256KB_Driver HardwareDebug.jlink
@@ -8443,10 +8444,10 @@ index 0000000..bb0ea0b
 +
 +/* --- EOF ------------------------------------------------------------------ */
 diff --git a/main.c b/main.c
-index 5e9ec61..bda1502 100644
+index 5e9ec61..997b132 100644
 --- a/main.c
 +++ b/main.c
-@@ -1,1641 +1,1057 @@
+@@ -1,1641 +1,1049 @@
 -/**********************************************************************************************************************
 -* DISCLAIMER
 -* This software is supplied by Renesas Electronics Corporation and is only intended for use with Renesas products. No
@@ -8486,13 +8487,6 @@ index 5e9ec61..bda1502 100644
 -     * It copies Driver codes, which change the allocation area from ROM to RAM, by using r_[module]_cfg.h
 -     * Attention: Every code Pin.c is always allocated to RAM. These functions are called from API. */
 -    R_SYS_CodeCopy ();
--
--    /* Initialize System Function Driver. This function needs to be called after R_SYS_CodeCopy function. */
--    R_SYS_Initialize ();
--
--    /* Initialize LPM Function Driver. */
--    /* This function needs to be called before call R_LPM_IOPowerSupplyModeSet function. */
--    R_LPM_Initialize ();
 +#include "RE01_256KB.h"
 +#include <stdio.h>
 +#include <stdlib.h>
@@ -8535,40 +8529,48 @@ index 5e9ec61..bda1502 100644
 +#include "transceiver_rtc.h"
 +#include "transceiver_power.h"
  
+-    /* Initialize System Function Driver. This function needs to be called after R_SYS_CodeCopy function. */
+-    R_SYS_Initialize ();
++//#include "lr1110_radio.c"
+ 
+-    /* Initialize LPM Function Driver. */
+-    /* This function needs to be called before call R_LPM_IOPowerSupplyModeSet function. */
+-    R_LPM_Initialize ();
++#include "system_i2c.h"
++#include "system_i2c_simple_low_level.h"
+ 
 -    /* AGT0 Timer initialization */
 -    agt0_timer_init();
-+//#include "lr1110_radio.c"
++#include "isl9122.h"
++#include "battery.h"
  
 -    /* Initialize DCDC_EHC_EN */
 -    GpioInit( &DcdcEnable, DCDC_EHC_EN, PIN_OUTPUT, PIN_PUSH_PULL, PIN_NO_PULL, 1 );
-+#include "system_i2c.h"
-+#include "system_i2c_simple_low_level.h"
++#include "lr1110_radio.h"
  
 -    /* Set Power Supply Open Control Register (VOCR register) */
 -    if (0 != R_LPM_IOPowerSupplyModeSet(LPM_IOPOWER_SUPPLY_AVCC0 | LPM_IOPOWER_SUPPLY_IOVCC1))
 -    {
 -       main_error();
 -    }
-+#include "isl9122.h"
-+#include "battery.h"
++#include "lr1110_firmware_update.h"
  
 -    /* Initialize LVD and LVDBAT. */
 -    lvd_lvdbat_init((e_lvd_level_t) MAIN_PRV_LVDLVL_SHUTDOWN, (e_lvdbat_level_t) MAIN_PRV_LVDBATLVL_BRECOVERY_ENTRY,
 -           lvd_callback);
-+#include "lr1110_radio.h"
++#include "hs300x.h"
  
 -    /* Initialize clock and push-switch setting. */
 -    re01_init();
-+#include "lr1110_firmware_update.h"
++extern void initialise_monitor_handles(void);
  
 -    /* Update LCD screen. */
 -    lcd_update(g_bitmap_opening_data);
-+#include "hs300x.h"
  
 -    /* LoRa Main loop */
 -    main_loop();
 -} /* End of function main */
-+extern void initialise_monitor_handles(void);
++/* Start user code for include. */
  
 -/*******************************************************************************************************************//**
 -* @fn           BoardInit()
@@ -8584,18 +8586,28 @@ index 5e9ec61..bda1502 100644
 -    /*  This function performs at beginning of start-up after released reset pin. Please set pins here if your board
 -    * is needed pins setting at the device start-up. This function is suiting Evaluation Kit RE01 256KB.
 -    * Please change to your board pin setting */
++/* End user code.*/
  
 -    /*DCDC_EHC_EN output low*/
 -    PFS->P209PFS = 0x00000004U;
-+/* Start user code for include. */
++/* Start user code for global.*/
  
 -    /*DCDC_Ext_EN output low*/
 -    PFS->P208PFS = 0x00000004U;
-+/* End user code.*/
++/* End user code. */
++/*
++ * -----------------------------------------------------------------------------
++ * --- PRIVATE MACROS-----------------------------------------------------------
++ */
  
 -    return;
 -} /* End of function BoardInit */
-+/* Start user code for global.*/
++/*
++ * -----------------------------------------------------------------------------
++ * --- PRIVATE CONSTANTS -------------------------------------------------------
++ */
++ 
++ #define EPOCH_BUFFER_LEN 10
  
 -/*******************************************************************************************************************//**
 -* @fn           lcd_update()
@@ -8607,61 +8619,54 @@ index 5e9ec61..bda1502 100644
 -{
 -    /* Initializes the R_SMIP driver for LCD communication */
 -    lcd_open();
-+/* End user code. */
 +/*
 + * -----------------------------------------------------------------------------
-+ * --- PRIVATE MACROS-----------------------------------------------------------
++ * --- PRIVATE TYPES -----------------------------------------------------------
 + */
  
 -    /* Function starts communication with the LCD and displays a black screen.*/
 -    lcd_on();
 +/*
 + * -----------------------------------------------------------------------------
-+ * --- PRIVATE CONSTANTS -------------------------------------------------------
-+ */
-+ 
-+ #define EPOCH_BUFFER_LEN 10
- 
--    /* Function sends the image data specified in the argument to the LCD */
--    lcd_send(lcd_data);
-+/*
-+ * -----------------------------------------------------------------------------
-+ * --- PRIVATE TYPES -----------------------------------------------------------
-+ */
- 
--    /* Wait to keep LCD screen ON */
--    R_SYS_SoftwareDelay(MAIN_PRV_LCD_KEEP_TIME_MS, SYSTEM_DELAY_UNITS_MILLISECONDS);
-+/*
-+ * -----------------------------------------------------------------------------
 + * --- PRIVATE VARIABLES -------------------------------------------------------
 + */
  
--    /* API for closing Serial MIP peripheral.*/
--    R_SMIP_Close();
+-    /* Function sends the image data specified in the argument to the LCD */
+-    lcd_send(lcd_data);
 +/*!
 + * \brief Radio hardware and global parameters
 + */
 +radio_t lr1110;
  
--    /* Below code blackout the LCD screen */
--    SMIP_CFG_VCOM_PORT->PDR  = (SMIP_CFG_VCOM_PORT->PDR & (~(1 << SMIP_CFG_VCOM_PIN)));
--    SMIP_CFG_VCOM_PORT->PODR = (SMIP_CFG_VCOM_PORT->PODR & (~(1 << SMIP_CFG_VCOM_PIN)));
+-    /* Wait to keep LCD screen ON */
+-    R_SYS_SoftwareDelay(MAIN_PRV_LCD_KEEP_TIME_MS, SYSTEM_DELAY_UNITS_MILLISECONDS);
 +/*
 + * -----------------------------------------------------------------------------
 + * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
 + */
  
--    SMIP_CFG_RST_DISP_PORT->PDR  = (SMIP_CFG_RST_DISP_PORT->PDR | ((1 << SMIP_CFG_RST_DISP_PIN)));
--    SMIP_CFG_RST_DISP_PORT->PODR = (SMIP_CFG_RST_DISP_PORT->PODR | ((1 << SMIP_CFG_RST_DISP_PIN)));
+-    /* API for closing Serial MIP peripheral.*/
+-    R_SMIP_Close();
 +/*!
 + * \brief Reset event callback
 + *
 + * \param [in] reset_count reset counter from the modem
 + */
  
+-    /* Below code blackout the LCD screen */
+-    SMIP_CFG_VCOM_PORT->PDR  = (SMIP_CFG_VCOM_PORT->PDR & (~(1 << SMIP_CFG_VCOM_PIN)));
+-    SMIP_CFG_VCOM_PORT->PODR = (SMIP_CFG_VCOM_PORT->PODR & (~(1 << SMIP_CFG_VCOM_PIN)));
++#define ACK_WAIT_COUNT 1000  // msec
+ 
+-    SMIP_CFG_RST_DISP_PORT->PDR  = (SMIP_CFG_RST_DISP_PORT->PDR | ((1 << SMIP_CFG_RST_DISP_PIN)));
+-    SMIP_CFG_RST_DISP_PORT->PODR = (SMIP_CFG_RST_DISP_PORT->PODR | ((1 << SMIP_CFG_RST_DISP_PIN)));
++//static void lr1110_modem_reset_event( uint16_t reset_count );
++int semtech_main( void );
+ 
 -    return;
 -} /* End of function lcd_update */
--
++static int8_t read_hs300x();
+ 
 -/*******************************************************************************************************************//**
 -* @fn           lcd_sensor_data_update()
 -* @brief        Function to update the LCD screen.
@@ -8672,40 +8677,40 @@ index 5e9ec61..bda1502 100644
 -{
 -    /* Initializes the R_SMIP driver for LCD communication */
 -    lcd_open();
-+#define ACK_WAIT_COUNT 1000  // msec
- 
--    /* Function starts communication with the LCD and displays a black screen.*/
--    lcd_on();
-+//static void lr1110_modem_reset_event( uint16_t reset_count );
-+int semtech_main( void );
- 
--    /* Function sends the image data specified in the argument to the LCD */
--    lcd_send(bgimg);
-+static int8_t read_hs300x();
- 
--    NumberToRasterImage( (float)sensors.grp1.batteryLevel / 1000.0f, 4, 2, DISPLAY_CHAR_SPACE_PAD, bgimg, numbersimg, 40, 52);
--    DisplayDraw( bgimg, 52, 24 );
 +extern environment_location_t location_assist;
 +extern int8_t accel_event_flag;
 +extern uint32_t rtc_global_count;
  
+-    /* Function starts communication with the LCD and displays a black screen.*/
+-    lcd_on();
++UART_DRIVER_FIFO uart0_dev;
+ 
+-    /* Function sends the image data specified in the argument to the LCD */
+-    lcd_send(bgimg);
+ 
+-    NumberToRasterImage( (float)sensors.grp1.batteryLevel / 1000.0f, 4, 2, DISPLAY_CHAR_SPACE_PAD, bgimg, numbersimg, 40, 52);
+-    DisplayDraw( bgimg, 52, 24 );
+ 
 -    NumberToRasterImage( (float)sensors.grp1.temperature/100.0f, 4, 1, DISPLAY_CHAR_SPACE_PAD, bgimg, numbersimg, 32, 123);
 -    DisplayDraw( bgimg, 123, 24 );
-+UART_DRIVER_FIFO uart0_dev;
++int8_t rtc_valid_flag;
  
 -    NumberToRasterImage( (float)sensors.grp1.humidity/100.0f, 4, 1, DISPLAY_CHAR_SPACE_PAD, bgimg, numbersimg, 164, 123);
 -    DisplayDraw( bgimg, 123, 24 );
++uint8_t almanac_data[ALMANAC_DATA_LENGTH + PAYLOAD_LENGTH + 1];
  
 -    /* API for closing Serial MIP peripheral.*/
 -    R_SMIP_Close();
++char uart_send_buf[UART_BUFFER_SIZE+1];
++char uart_receive_buf[UART_BUFFER_SIZE+1];
++char radio_data_buf[RADIO_DATA_BUFFER_SIZE+1];
  
 -    /* 20 ms Delay.*/
 -    DelayMs( 20 );
-+int8_t rtc_valid_flag;
++#define LR1110_RESPONSE_CODE_OK 0
  
 -    return;
 -} /* End of function lcd_update */
-+uint8_t almanac_data[ALMANAC_DATA_LENGTH + PAYLOAD_LENGTH + 1];
  
 -/*******************************************************************************************************************//**
 -* @fn           main_loop()
@@ -8732,9 +8737,8 @@ index 5e9ec61..bda1502 100644
 -            /* LoRa state machines and application run */
 -            app_run();
 -        }
-+char uart_send_buf[UART_BUFFER_SIZE+1];
-+char uart_receive_buf[UART_BUFFER_SIZE+1];
-+char radio_data_buf[RADIO_DATA_BUFFER_SIZE+1];
++lr1110_gnss_timings_t timings;
++extern uint32_t agt_global_count;
  
 -        /* If insufficient voltage is supplied, perform battery recovery process. */
 -        else
@@ -8790,7 +8794,7 @@ index 5e9ec61..bda1502 100644
 -        while ( 1 );
 -    }
 -} /* End of function LoRa_init */
-+#define LR1110_RESPONSE_CODE_OK 0
++lr1110_gnss_solver_assistance_position_t gnss_position;
  
 -/*******************************************************************************************************************//**
 -* @fn           JoinNetwork()
@@ -8815,16 +8819,17 @@ index 5e9ec61..bda1502 100644
 -            LoRaMacQueryNextTxDelay( LORAWAN_DEFAULT_DATARATE, &nextTxIn );
 -        }
 -    }
++static lr1110_system_irq_mask_t irq_mask_test = LR1110_SYSTEM_IRQ_NONE;
  
 -    DeviceState = DEVICE_STATE_CYCLE;
-+lr1110_gnss_timings_t timings;
-+extern uint32_t agt_global_count;
++extern int8_t irq3_event_flag;
  
 -    /* Switch ON LED 1, start the timer */
 -    GpioWrite( &Led1, 0 );
 -    TimerStart( &Led1Timer );
 -} /* End of function JoinNetwork */
-+lr1110_gnss_solver_assistance_position_t gnss_position;
++static int8_t assist_data_valid_flag;
++static int8_t almanac_data_valid_flag;
  
 -/*******************************************************************************************************************//**
 -* @fn           PrepareTxFrame()
@@ -8854,14 +8859,12 @@ index 5e9ec61..bda1502 100644
 -        serial_send(&sensors);
 -#endif
 -        memcpy( &AppDataBuffer, &sensors.grp1, sizeof(sensor_group1_t) );
-+static lr1110_system_irq_mask_t irq_mask_test = LR1110_SYSTEM_IRQ_NONE;
++hs300x_data_t hs300x_data;
  
 -        AppDataSizeBackup = AppDataSize = sizeof(sensor_group1_t);
-+extern int8_t irq3_event_flag;
++#define MINIMUM_NB_SAT 4 // Minimum # of satellites to resolve position
  
 -        break;
-+static int8_t assist_data_valid_flag;
-+static int8_t almanac_data_valid_flag;
  
 -    case 224:
 -        if( ComplianceTest.LinkCheck == true )
@@ -8934,7 +8937,10 @@ index 5e9ec61..bda1502 100644
 -            mcpsReq.Req.Confirmed.Datarate = LORAWAN_DEFAULT_DATARATE;
 -        }
 -    }
-+hs300x_data_t hs300x_data;
++extern ARM_DRIVER_I2C Driver_I2C0;
++uint16_t scan_adc;
++float battery_voltage;
++#define ADC_MAX_VALUE 0x4000
  
 -    LoRaMacStatus_t status;
 -    status = LoRaMacMcpsRequest( &mcpsReq );
@@ -8943,19 +8949,18 @@ index 5e9ec61..bda1502 100644
 -        TimerTime_t nextTxIn = 0;
 -        LoRaMacQueryNextTxDelay( LORAWAN_DEFAULT_DATARATE, &nextTxIn );
 -    }
-+#define MINIMUM_NB_SAT 4 // Minimum # of satellites to resolve position
- 
+-
 -    if( status == LORAMAC_STATUS_OK )
 -    {
 -        return false;
 -    }
++/*
++ * -----------------------------------------------------------------------------
++ * --- WiFi ---------------------------------------------
++ */
  
 -    return true;
 -} /* End of function SendFrame */
-+extern ARM_DRIVER_I2C Driver_I2C0;
-+uint16_t scan_adc;
-+float battery_voltage;
-+#define ADC_MAX_VALUE 0x4000
  
 -/*******************************************************************************************************************//**
 -* @fn           OnTxNextPacketTimerEvent()
@@ -8967,17 +8972,14 @@ index 5e9ec61..bda1502 100644
 -{
 -    MibRequestConfirm_t mibReq;
 -    LoRaMacStatus_t status;
-+/*
-+ * -----------------------------------------------------------------------------
-+ * --- WiFi ---------------------------------------------
-+ */
++#define WIFI_BINARY_DATA_SIZE (25)
  
 -    /* Stop the timer */
 -    TimerStop( &TxNextPacketTimer );
++extern demo_wifi_scan_all_results_t WifiScan_results;
  
 -    mibReq.Type = MIB_NETWORK_ACTIVATION;
-+#define WIFI_BINARY_DATA_SIZE (25)
- 
+-
 -    /* LoRa MIB Request Confirmation  */
 -    status = LoRaMacMibGetRequestConfirm( &mibReq );
 -    if( status == LORAMAC_STATUS_OK )
@@ -8987,8 +8989,7 @@ index 5e9ec61..bda1502 100644
 -        {
 -            /* Network not joined yet. Try to join again */
 -            JoinNetwork( );
-+extern demo_wifi_scan_all_results_t WifiScan_results;
- 
+-
 -        }
 -        else
 -        {
@@ -9021,16 +9022,9 @@ index 5e9ec61..bda1502 100644
 -* @brief        Function executed on Led 2 Timeout event
 -* @param        void* context - Null pointer.
 -* @return       None.
-+/***********************************************************************************************************************
-+* Function Name: main
-+* Revision     : 1.00
-+* Description  : main function. This sample code makes LED0 and LED1 blinks. The output signals of LED0 and LED1 are endlessly toggled every 100 ms. 
-+* Arguments    : none
-+* Return Value : none
- ***********************************************************************************************************************/
+-***********************************************************************************************************************/
 -static void OnLed2TimerEvent( void* context )
-+int main()
- {
+-{
 -    TimerStop( &Led2Timer );
 -
 -    /* Switch LED 2 OFF */
@@ -9043,9 +9037,16 @@ index 5e9ec61..bda1502 100644
 -* @param        McpsConfirm_t *mcpsConfirm
 -*                   Pointer to the confirm structure, containing confirm attributes.
 -* @return       None.
--***********************************************************************************************************************/
++/***********************************************************************************************************************
++* Function Name: main
++* Revision     : 1.00
++* Description  : main function. This sample code makes LED0 and LED1 blinks. The output signals of LED0 and LED1 are endlessly toggled every 100 ms. 
++* Arguments    : none
++* Return Value : none
+ ***********************************************************************************************************************/
 -static void McpsConfirm( McpsConfirm_t *mcpsConfirm )
--{
++int main()
+ {
 -    if( mcpsConfirm->Status == LORAMAC_EVENT_INFO_STATUS_OK )
 -    {
 -        switch( mcpsConfirm->McpsRequest )
@@ -9716,10 +9717,7 @@ index 5e9ec61..bda1502 100644
 +#if (BOARD_TYPE_EVK_TOKYOCOM == 1)
 +#if (BOARD_TYPE1_TX_VERSION == 1)
 +        battery_voltage = 3.3;
- #else
--        mibReq.Type = MIB_APP_KEY;
--        mibReq.Param.AppKey = AppKey;
--        LoRaMacMibSetRequestConfirm( &mibReq );
++#else
 +        battery_read(&scan_adc);
 +        if (scan_adc > 0 && scan_adc < ADC_MAX_VALUE) {
 +            battery_voltage = 1.25/scan_adc * ADC_MAX_VALUE;
@@ -9731,7 +9729,10 @@ index 5e9ec61..bda1502 100644
 +            //      battery_voltage = 3.3;
 +        }
 +#endif
-+#else
+ #else
+-        mibReq.Type = MIB_APP_KEY;
+-        mibReq.Param.AppKey = AppKey;
+-        LoRaMacMibSetRequestConfirm( &mibReq );
 +        battery_voltage = 3.3;
 +//Not used
 +//*        battery_read(&scan_adc);
@@ -9874,6 +9875,7 @@ index 5e9ec61..bda1502 100644
 +    
 +    if (WifiScan_results.nbrResults > 2) {
 +        radio_init();
++        system_time_wait_ms( 3000 );
 +        radio_tx_len  = CommunicationDemo_Store( &WifiScan_results , radio_data_buf );
 +        semtech_radio_tx_len( radio_data_buf, radio_tx_len, ACK_RECEIVE_INTERVAL);
 +        system_time_wait_ms( 100 );
@@ -9889,9 +9891,10 @@ index 5e9ec61..bda1502 100644
 +        }
 +        system_time_wait_ms( 100 );
 +        radio_init();
++        system_time_wait_ms( 3000 );
 +        semtech_radio_tx_len( radio_data_buf ,radio_tx_len, ACK_RECEIVE_INTERVAL);
 +    }
-+    system_time_wait_ms( 1000 );
++    system_time_wait_ms( 2000 );
  
 -        mibReq.Type = MIB_NET_ID;
 -        mibReq.Param.NetID = LORAWAN_NETWORK_ID;
@@ -9904,23 +9907,15 @@ index 5e9ec61..bda1502 100644
 -        mibReq.Type = MIB_F_NWK_S_INT_KEY;
 -        mibReq.Param.FNwkSIntKey = FNwkSIntKey;
 -        LoRaMacMibSetRequestConfirm( &mibReq );
-+#if (BOARD_TYPE_EVK_TOKYOCOM  == 2)
-+        // LoRa dummy data send
-+        sprintf(radio_data_buf, "$dummy Active data =%d= battery=%03d, RSSI=%+04d\n",1,(int)(battery_voltage*100), wsc_rssi_pkt_in_dbm );
-+        semtech_radio_tx( radio_data_buf, ACK_RECEIVE_INTERVAL);
-+        system_time_wait_ms( 1000 );
- 
+-
 -        mibReq.Type = MIB_S_NWK_S_INT_KEY;
 -        mibReq.Param.SNwkSIntKey = SNwkSIntKey;
 -        LoRaMacMibSetRequestConfirm( &mibReq );
-+        // LoRa dummy data send
-+        sprintf(radio_data_buf, "$dummy Active data =%d= battery=%03d, RSSI=%+04d\n",2,(int)(battery_voltage*100), wsc_rssi_pkt_in_dbm );
-+        semtech_radio_tx( radio_data_buf, ACK_RECEIVE_INTERVAL);
-+        system_time_wait_ms( 1000 );
- 
+-
 -        mibReq.Type = MIB_NWK_S_ENC_KEY;
 -        mibReq.Param.NwkSEncKey = NwkSEncKey;
 -        LoRaMacMibSetRequestConfirm( &mibReq );
++#if (BOARD_TYPE_EVK_TOKYOCOM  == 2)
 +#if (GET_RSSI_SNR == 1)
 +		lr1110_radio_get_lora_pkt_status( &lr1110, &pkt_status );
 +#endif
@@ -9937,8 +9932,8 @@ index 5e9ec61..bda1502 100644
 -        mibReq.Type = MIB_NETWORK_ACTIVATION;
 -        mibReq.Param.NetworkActivation = ACTIVATION_TYPE_ABP;
 -        LoRaMacMibSetRequestConfirm( &mibReq );
-+            sprintf(radio_data_buf, "$TH Temperature=%+05d, Humidity=%04d, battery=%04d, RSSI=%+04d \n", \
-+                                   wsi_temp ,wsi_humi ,(int)(battery_voltage*100), wsc_rssi_pkt_in_dbm);
++            sprintf(radio_data_buf, "$TH Temp=%+05d, Humi=%04d, RSSI=%+04d, NB_SAT=%04d \n", \
++                                         wsi_temp  , wsi_humi , wsc_rssi_pkt_in_dbm, nb_sat_assist);
 +        } else {
 +            sprintf(radio_data_buf, "$TH sts=%d : Temperature or Humidity Error\n",wsi_ret );
 +        }
@@ -12433,10 +12428,10 @@ index 0000000..f4f3f29
 +#endif
 diff --git a/transceiver_wifi_scan.c b/transceiver_wifi_scan.c
 new file mode 100644
-index 0000000..7c15fb8
+index 0000000..3ad7e19
 --- /dev/null
 +++ b/transceiver_wifi_scan.c
-@@ -0,0 +1,575 @@
+@@ -0,0 +1,612 @@
 +/**
 + * @file      demo_transceiver_wifi_scan.cpp
 + *
@@ -12911,13 +12906,17 @@ index 0000000..7c15fb8
 +}
 +
 +
-+int16_t CommunicationDemo_Store( const demo_wifi_scan_all_results_t* p_wifi_results , int8_t *p_wifi_result_str )
++int16_t CommunicationDemo_Store( demo_wifi_scan_all_results_t* p_wifi_results , int8_t *p_wifi_result_str )
 +{
 +	uint8_t result_index;
++	uint8_t wui, wuj;
++	demo_wifi_scan_single_result_t work_result;
 +//    demo_wifi_scan_single_result_t local_result;
 +	int16_t tx_len;
 +	wifi_tx_packet* p_packet;
 +	wifi_tx_header* p_header;
++	int16_t results_down;
++	results_down = 0;
 +
 +    p_header = (wifi_tx_header*)p_wifi_result_str;
 +
@@ -12928,16 +12927,49 @@ index 0000000..7c15fb8
 +	p_header->rx_correlation_us =  p_wifi_results->timings.rx_correlation_us;
 +	p_header->rx_detection_us   =  p_wifi_results->timings.rx_detection_us;
 +	
++	// AP Result Sort
++	for(wui = 0; wui < (p_wifi_results->nbrResults - 1); wui++ )
++	{
++		for(wuj = (wui + 1); wuj < p_wifi_results->nbrResults; wuj++ )
++		{
++			if( p_wifi_results->results[wui].rssi < p_wifi_results->results[wuj].rssi ) {
++
++				memcpy(&(work_result.mac_address[0]), &(p_wifi_results->results[wui].mac_address[0]),6);
++				work_result.channel = p_wifi_results->results[wui].channel;
++				work_result.type    = p_wifi_results->results[wui].type;
++				work_result.rssi    = p_wifi_results->results[wui].rssi;
++
++				memcpy(&(p_wifi_results->results[wui].mac_address[0]), &(p_wifi_results->results[wuj].mac_address[0]),6);
++				p_wifi_results->results[wui].channel = p_wifi_results->results[wuj].channel;
++				p_wifi_results->results[wui].type    = p_wifi_results->results[wuj].type;
++				p_wifi_results->results[wui].rssi    = p_wifi_results->results[wuj].rssi;
++
++				memcpy(&(p_wifi_results->results[wuj].mac_address[0]), &(work_result.mac_address[0]),6);
++				p_wifi_results->results[wuj].channel = work_result.channel;
++				p_wifi_results->results[wuj].type    = work_result.type;
++				p_wifi_results->results[wuj].rssi    = work_result.rssi;
++
++			}
++		}
++	}
++	
 +	p_packet = (wifi_tx_packet*)(p_wifi_result_str + sizeof(wifi_tx_header));
 +    for(result_index = 0; result_index < p_wifi_results->nbrResults; result_index++ )
 +    {
-+		memcpy(&(p_packet->mac_address[0]), &(p_wifi_results->results[result_index].mac_address[0]),6);
-+		p_packet->channel=p_wifi_results->results[result_index].channel;
-+		p_packet->type   =p_wifi_results->results[result_index].type;
-+		p_packet->rssi   =p_wifi_results->results[result_index].rssi;
-+		p_packet++;
++    	if( p_wifi_results->results[result_index].channel !=  0 && 
++    	   (p_wifi_results->results[result_index].channel <= 14 )) {
++			memcpy(&(p_packet->mac_address[0]), &(p_wifi_results->results[result_index].mac_address[0]),6);
++			p_packet->channel=p_wifi_results->results[result_index].channel;
++			p_packet->type   =p_wifi_results->results[result_index].type;
++			p_packet->rssi   =p_wifi_results->results[result_index].rssi;
++			p_packet++;
++		}
++    	else {
++    		results_down++;
++    	}
 +	}
-+	tx_len = sizeof(wifi_tx_header) + sizeof(wifi_tx_packet) * p_wifi_results->nbrResults;
++	p_header->nbrResults =  p_wifi_results->nbrResults - results_down;
++	tx_len = sizeof(wifi_tx_header) + sizeof(wifi_tx_packet) * (p_wifi_results->nbrResults - results_down);
 +	return tx_len;
 +
 +}
@@ -13014,7 +13046,7 @@ index 0000000..7c15fb8
 +}
 diff --git a/transceiver_wifi_scan.h b/transceiver_wifi_scan.h
 new file mode 100644
-index 0000000..2a015ab
+index 0000000..5ede241
 --- /dev/null
 +++ b/transceiver_wifi_scan.h
 @@ -0,0 +1,91 @@
@@ -13098,7 +13130,7 @@ index 0000000..2a015ab
 +
 +void WifiInterface_SpecificRuntime(void);
 +
-+int16_t CommunicationDemo_Store( const demo_wifi_scan_all_results_t* p_wifi_results , int8_t *p_wifi_result_str );
++int16_t CommunicationDemo_Store( demo_wifi_scan_all_results_t* p_wifi_results , int8_t *p_wifi_result_str );
 +
 +
 +void wifi_packet_to_string(wifi_tx_header* src_header, wifi_tx_packet* src_mac, char* dst);
