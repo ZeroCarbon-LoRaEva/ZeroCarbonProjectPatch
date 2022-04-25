@@ -1,9 +1,8 @@
-From 363d0e5977ea26cadab803b474ed097a5c47bff7 Mon Sep 17 00:00:00 2001
+From 35b9d18e0c7187d58e18d117097b56d3fe8f2e5e Mon Sep 17 00:00:00 2001
 From: hayashi <hayashi@nds-osk.co.jp>
-Date: Tue, 15 Feb 2022 15:56:30 +0900
-Subject: [PATCH] Wifi AP design change & error repair
+Date: Mon, 25 Apr 2022 11:57:12 +0900
+Subject: [PATCH] ZeroCarbon-Custom
 
-ZeroCarbon-Custom
 ---
  .cproject                                     | 1398 +++++++---
  .project                                      |    2 +-
@@ -7171,7 +7170,7 @@ index 0000000..d5a550a
 +#endif /* R_RTC_H_ */
 diff --git a/config_mode.h b/config_mode.h
 new file mode 100644
-index 0000000..48d8bda
+index 0000000..307c0d0
 --- /dev/null
 +++ b/config_mode.h
 @@ -0,0 +1,92 @@
@@ -7200,7 +7199,7 @@ index 0000000..48d8bda
 +
 +
 +// Selector 1 ..  SEND GNSS data to SERVER  0 .. Dont Send
-+#define SEND_TO_SERVER (0)
++#define SEND_TO_SERVER (1)
 +
 +//#define INHIBIT_SSTBY (1)
 +#define INHIBIT_SSTBY (0)
@@ -8444,7 +8443,7 @@ index 0000000..bb0ea0b
 +
 +/* --- EOF ------------------------------------------------------------------ */
 diff --git a/main.c b/main.c
-index 5e9ec61..997b132 100644
+index 5e9ec61..fc5b942 100644
 --- a/main.c
 +++ b/main.c
 @@ -1,1641 +1,1049 @@
@@ -8979,7 +8978,11 @@ index 5e9ec61..997b132 100644
 +extern demo_wifi_scan_all_results_t WifiScan_results;
  
 -    mibReq.Type = MIB_NETWORK_ACTIVATION;
--
++/*
++ * -----------------------------------------------------------------------------
++ * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
++ */
+ 
 -    /* LoRa MIB Request Confirmation  */
 -    status = LoRaMacMibGetRequestConfirm( &mibReq );
 -    if( status == LORAMAC_STATUS_OK )
@@ -8989,7 +8992,7 @@ index 5e9ec61..997b132 100644
 -        {
 -            /* Network not joined yet. Try to join again */
 -            JoinNetwork( );
--
+ 
 -        }
 -        else
 -        {
@@ -8998,44 +9001,11 @@ index 5e9ec61..997b132 100644
 -        }
 -    }
 -} /* End of function OnTxNextPacketTimerEvent */
-+/*
-+ * -----------------------------------------------------------------------------
-+ * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
-+ */
  
 -/*******************************************************************************************************************//**
 -* @fn           OnLed1TimerEvent()
 -* @brief        Function executed on Led 1 Timeout event.
 -* @param        void* context - Null pointer.
--* @return       None.
--***********************************************************************************************************************/
--static void OnLed1TimerEvent( void* context )
--{
--    TimerStop( &Led1Timer );
- 
--    /* Switch LED 1 OFF */
--    GpioWrite( &Led1, 1 );
--} /* End of function OnLed1TimerEvent */
- 
--/*******************************************************************************************************************//**
--* @fn           OnLed2TimerEvent()
--* @brief        Function executed on Led 2 Timeout event
--* @param        void* context - Null pointer.
--* @return       None.
--***********************************************************************************************************************/
--static void OnLed2TimerEvent( void* context )
--{
--    TimerStop( &Led2Timer );
--
--    /* Switch LED 2 OFF */
--    GpioWrite( &Led2, 1 );
--} /* End of function OnLed2TimerEvent */
--
--/*******************************************************************************************************************//**
--* @fn           McpsConfirm()
--* @brief        LoRaMAC callback for the MCPS-Confirm event
--* @param        McpsConfirm_t *mcpsConfirm
--*                   Pointer to the confirm structure, containing confirm attributes.
 -* @return       None.
 +/***********************************************************************************************************************
 +* Function Name: main
@@ -9044,24 +9014,10 @@ index 5e9ec61..997b132 100644
 +* Arguments    : none
 +* Return Value : none
  ***********************************************************************************************************************/
--static void McpsConfirm( McpsConfirm_t *mcpsConfirm )
+-static void OnLed1TimerEvent( void* context )
 +int main()
  {
--    if( mcpsConfirm->Status == LORAMAC_EVENT_INFO_STATUS_OK )
--    {
--        switch( mcpsConfirm->McpsRequest )
--        {
--        case MCPS_UNCONFIRMED:
--            /* Check Datarate */
--            /* Check TxPower */
--            break;
--
--        case MCPS_CONFIRMED:
--            /* Check Datarate */
--            /* Check TxPower */
--            /* Check AckReceived */
--            /* Check NbTrials */
--            break;
+-    TimerStop( &Led1Timer );
 +int32_t gs_ret;
 +      int ic;
 +//  initialise_monitor_handles();
@@ -9133,38 +9089,90 @@ index 5e9ec61..997b132 100644
 +
 +  __NOP();
  
--        case MCPS_PROPRIETARY:
--            break;
+-    /* Switch LED 1 OFF */
+-    GpioWrite( &Led1, 1 );
+-} /* End of function OnLed1TimerEvent */
 +#else
  
--        default:
+-/*******************************************************************************************************************//**
+-* @fn           OnLed2TimerEvent()
+-* @brief        Function executed on Led 2 Timeout event
+-* @param        void* context - Null pointer.
+-* @return       None.
+-***********************************************************************************************************************/
+-static void OnLed2TimerEvent( void* context )
+-{
+-    TimerStop( &Led2Timer );
+-
+-    /* Switch LED 2 OFF */
+-    GpioWrite( &Led2, 1 );
+-} /* End of function OnLed2TimerEvent */
+-
+-/*******************************************************************************************************************//**
+-* @fn           McpsConfirm()
+-* @brief        LoRaMAC callback for the MCPS-Confirm event
+-* @param        McpsConfirm_t *mcpsConfirm
+-*                   Pointer to the confirm structure, containing confirm attributes.
+-* @return       None.
+-***********************************************************************************************************************/
+-static void McpsConfirm( McpsConfirm_t *mcpsConfirm )
+-{
+-    if( mcpsConfirm->Status == LORAMAC_EVENT_INFO_STATUS_OK )
+-    {
+-        switch( mcpsConfirm->McpsRequest )
+-        {
+-        case MCPS_UNCONFIRMED:
+-            /* Check Datarate */
+-            /* Check TxPower */
 -            break;
--        }
 +//  SYSC->PRCR = 0xA501;              /* PRCR0 is Disable */
 +//  SYSC->SCKDIVCR_b.ICK = 0;         /* ICLK 1/1 */
 +//  while(SYSC->SCKDIVCR_b.ICK != 0);
 +#ifdef USE_MAINOSC
 +  R_LPM_PowerSupplyModeAllpwonSet();
  
--        /* Switch LED 1 ON */
--        GpioWrite( &Led1, 0 );
--        TimerStart( &Led1Timer );
--    }
+-        case MCPS_CONFIRMED:
+-            /* Check Datarate */
+-            /* Check TxPower */
+-            /* Check AckReceived */
+-            /* Check NbTrials */
+-            break;
 +  R_SYS_MainOscSpeedClockStart();      /* Started MainOSC */
  
--    MibRequestConfirm_t mibGet;
--    MibRequestConfirm_t mibReq;
+-        case MCPS_PROPRIETARY:
+-            break;
 +  gs_ret = R_SYS_SystemClockMOSCSet();  /* set MainOSC as System Clock */
 +  APP_ERR_HANDLER(gs_ret);
  
--    mibReq.Type = MIB_DEVICE_CLASS;
--    LoRaMacMibGetRequestConfirm( &mibReq );
+-        default:
+-            break;
+-        }
 +  gs_ret = R_SYS_HighSpeedClockStop();     /* Stop HOCO */
 +  APP_ERR_HANDLER(gs_ret);
 +  gs_ret = R_SYS_MediumSpeedClockStop();     /* Stop MOCO */
 +  APP_ERR_HANDLER(gs_ret);
 +#else
 +  R_LPM_PowerSupplyModeAllpwonSet();
+ 
+-        /* Switch LED 1 ON */
+-        GpioWrite( &Led1, 0 );
+-        TimerStart( &Led1Timer );
+-    }
++  R_SYS_HighSpeedClockStart();      /* Started MainOSC */
++    system_time_wait_ms( 100 );
+ 
+-    MibRequestConfirm_t mibGet;
+-    MibRequestConfirm_t mibReq;
++  gs_ret = R_SYS_SystemClockHOCOSet();  /* set MainOSC as System Clock */
++  APP_ERR_HANDLER(gs_ret);
+ 
+-    mibReq.Type = MIB_DEVICE_CLASS;
+-    LoRaMacMibGetRequestConfirm( &mibReq );
++  gs_ret = R_SYS_MainOscSpeedClockStop();     /* Stop HOCO */
++  APP_ERR_HANDLER(gs_ret);
++  gs_ret = R_SYS_MediumSpeedClockStop();     /* Stop MOCO */
++  APP_ERR_HANDLER(gs_ret);
++#endif
  
 -    if( AppData.BufferSize != 0 )
 -    {
@@ -9179,8 +9187,7 @@ index 5e9ec61..997b132 100644
 -    if( LoRaMacMibGetRequestConfirm( &mibGet ) == LORAMAC_STATUS_OK )
 -    {
 -    }
-+  R_SYS_HighSpeedClockStart();      /* Started MainOSC */
-+    system_time_wait_ms( 100 );
++  __NOP();
  
 -    mibGet.Type  = MIB_CHANNELS_MASK;
 -    if( LoRaMacMibGetRequestConfirm( &mibGet ) == LORAMAC_STATUS_OK )
@@ -9189,25 +9196,11 @@ index 5e9ec61..997b132 100644
 -    defined( REGION_EU868 ) || defined( REGION_IN865 ) || \
 -    defined( REGION_KR920 ) || defined( REGION_EU433 ) || \
 -    defined( REGION_RU864 )
-+  gs_ret = R_SYS_SystemClockHOCOSet();  /* set MainOSC as System Clock */
-+  APP_ERR_HANDLER(gs_ret);
  
 -        for( uint8_t i = 0; i < 1; i++)
-+  gs_ret = R_SYS_MainOscSpeedClockStop();     /* Stop HOCO */
-+  APP_ERR_HANDLER(gs_ret);
-+  gs_ret = R_SYS_MediumSpeedClockStop();     /* Stop MOCO */
-+  APP_ERR_HANDLER(gs_ret);
 +#endif
  
 -#elif defined( REGION_AU915 ) || defined( REGION_US915 ) || defined( REGION_CN470 )
-+  __NOP();
- 
--        for( uint8_t i = 0; i < 5; i++)
--#else
- 
--#error "Please define a region in the compiler options."
-+#endif
- 
 +//#if (DEBUG_LED == 1)
 +#if (BOARD_TYPE_EVK_TOKYOCOM  == 1)
 +R_SYS_RegisterProtectDisable(SYSTEM_REG_PROTECT_MPC);
@@ -9217,7 +9210,15 @@ index 5e9ec61..997b132 100644
 +    PFS->P410PFS = 0x04 | 0x01;
 +    wait_long();
 +}
- #endif
++#endif
++//#endif
+ 
+-        for( uint8_t i = 0; i < 5; i++)
+-#else
+ 
+-#error "Please define a region in the compiler options."
+ 
+-#endif
 -        {
 -        }
 -    }
@@ -9231,32 +9232,10 @@ index 5e9ec61..997b132 100644
 -* @return       None.
 -***********************************************************************************************************************/
 -static void McpsIndication( McpsIndication_t *mcpsIndication )
--{
--    if( mcpsIndication->Status != LORAMAC_EVENT_INFO_STATUS_OK )
--    {
--        return;
--    }
-+//#endif
- 
--    switch( mcpsIndication->McpsIndication )
--    {
--    case MCPS_UNCONFIRMED:
--        break;
- 
--    case MCPS_CONFIRMED:
--        break;
- 
--    case MCPS_PROPRIETARY:
--        break;
 +semtech_main();
- 
--    case MCPS_MULTICAST:
--        break;
++
 +}
- 
--    default:
--        break;
--    }
++
 +/**********************************************************************************************************************
 +* Function Name: BoardInit
 +* Description  : Configure board initial setting.
@@ -9266,7 +9245,35 @@ index 5e9ec61..997b132 100644
 +* Return Value : none
 +**********************************************************************************************************************/
 +void BoardInit(void)
-+{
+ {
+-    if( mcpsIndication->Status != LORAMAC_EVENT_INFO_STATUS_OK )
+-    {
+-        return;
+-    }
+ 
+-    switch( mcpsIndication->McpsIndication )
+-    {
+-    case MCPS_UNCONFIRMED:
+-        break;
++} /* End of function BoardInit */
++
+ 
+-    case MCPS_CONFIRMED:
+-        break;
+ 
+-    case MCPS_PROPRIETARY:
+-        break;
++/**************************************************************
+ 
+-    case MCPS_MULTICAST:
+-        break;
++ Wake up by Accelerometer
+ 
+-    default:
+-        break;
+-    }
++**************************************************************/
++int32_t last_accel_event_count;
  
 -    // Check Multicast
 -    // Check Port
@@ -9288,7 +9295,6 @@ index 5e9ec61..997b132 100644
 -    {
 -        ComplianceTest.DownLinkCounter++;
 -    }
-+} /* End of function BoardInit */
  
 -    if( mcpsIndication->RxData == true )
 -    {
@@ -9310,6 +9316,8 @@ index 5e9ec61..997b132 100644
 -                }
 -            }
 -            break;
++__attribute__ ((section(".ramfunc"))) void wait_for_wakeup_interrupt()
++{
  
 -        case 224:
 -            if( ComplianceTest.Running == false )
@@ -9339,7 +9347,22 @@ index 5e9ec61..997b132 100644
 -
 -#if defined( REGION_EU868 ) || defined( REGION_RU864 ) || defined( REGION_CN779 ) || defined( REGION_EU433 )
 -                    LoRaMacTestSetDutyCycleOn( false );
--#endif
++#if (DEBUG_LED == 1)
++#if (BOARD_TYPE_EVK_TOKYOCOM  == 1)
++    R_SYS_RegisterProtectDisable(SYSTEM_REG_PROTECT_MPC);
++    PFS->P210PFS = 0x04 | 0x00;
++    system_time_wait_ms( 1000 );
++    PFS->P210PFS = 0x04 | 0x01;
++    PFS->P410PFS = 0x04 | 0x00;
++    system_time_wait_ms( 500 );
++    PFS->P410PFS = 0x04 | 0x01;
++#elif (BOARD_TYPE_EVK_TOKYOCOM  == 2)
++    R_SYS_RegisterProtectDisable(SYSTEM_REG_PROTECT_MPC);
++    PFS->P208PFS = 0x04 | 0x01;
++    system_time_wait_ms( 500 );
++    PFS->P208PFS = 0x04 | 0x00;
++    system_time_wait_ms( 1000 );
+ #endif
 -                }
 -            }
 -            else
@@ -9360,7 +9383,8 @@ index 5e9ec61..997b132 100644
 -                    LoRaMacMibSetRequestConfirm( &mibReq );
 -#if defined( REGION_EU868 ) || defined( REGION_RU864 ) || defined( REGION_CN779 ) || defined( REGION_EU433 )
 -                    LoRaMacTestSetDutyCycleOn( LORAWAN_DUTYCYCLE_ON );
--#endif
++
+ #endif
 -                    break;
 -
 -                case 1: // (iii, iv)
@@ -9410,7 +9434,42 @@ index 5e9ec61..997b132 100644
 -                    LoRaMacMibSetRequestConfirm( &mibReq );
 -#if defined( REGION_EU868 ) || defined( REGION_RU864 ) || defined( REGION_CN779 ) || defined( REGION_EU433 )
 -                    LoRaMacTestSetDutyCycleOn( LORAWAN_DUTYCYCLE_ON );
--#endif
++    __NOP();
++    for (;;) {
++        accel_event_flag = false;
++        rtc_global_count =0;
++        system_lpm_wait_rtc(); // SSTBY wait
++
++        __NOP();
++        if (accel_event_flag == true) {
++#if (BOARD_TYPE_EVK_TOKYOCOM == 1)
++			if (((int32_t)rtc_read_current_binary_time() - last_accel_event_count) < (int32_t)IRQ_INT_MINUMIM_INTERVAL) {
++				continue;
++			}
+ #endif
++			break;
++		}
++    }
++    __NOP();
++    last_accel_event_count = (int32_t)rtc_read_current_binary_time();
++    //  DCDC_n();
++#if (DEBUG_LED == 1)
++#if (BOARD_TYPE_EVK_TOKYOCOM  == 1)
++    R_SYS_RegisterProtectDisable(SYSTEM_REG_PROTECT_MPC);
++    PFS->P210PFS = 0x04 | 0x00;
++    PFS->P410PFS = 0x04 | 0x00;
++    system_time_wait_ms( 1000 );
++    PFS->P210PFS = 0x04 | 0x01;
++    PFS->P410PFS = 0x04 | 0x01;
++#elif (BOARD_TYPE_EVK_TOKYOCOM  == 2)
++    R_SYS_RegisterProtectDisable(SYSTEM_REG_PROTECT_MPC);
++    PFS->P208PFS = 0x04 | 0x01;
++    system_time_wait_ms( 1000 );
++    PFS->P208PFS = 0x04 | 0x00;
++    system_time_wait_ms( 1000 );
++#endif
++#endif
++}
  
 -                    JoinNetwork( );
 -                }
@@ -9437,16 +9496,12 @@ index 5e9ec61..997b132 100644
 -                    ComplianceTest.State = 1;
 -                }
 -                break;
-+/**************************************************************
- 
+-
 -                case 8: // Send DeviceTimeReq
 -                    {
 -                        MlmeReq_t mlmeReq;
-+ Wake up by Accelerometer
  
 -                        mlmeReq.Type = MLME_DEVICE_TIME;
-+**************************************************************/
-+int32_t last_accel_event_count;
  
 -                        LoRaMacStatus_t status = LoRaMacMlmeRequest( &mlmeReq );
 -                    }
@@ -9457,29 +9512,12 @@ index 5e9ec61..997b132 100644
 -                }
 -            }
 -            break;
-+__attribute__ ((section(".ramfunc"))) void wait_for_wakeup_interrupt()
-+{
  
 -        default:
 -            break;
 -        }
 -    }
-+#if (DEBUG_LED == 1)
-+#if (BOARD_TYPE_EVK_TOKYOCOM  == 1)
-+    R_SYS_RegisterProtectDisable(SYSTEM_REG_PROTECT_MPC);
-+    PFS->P210PFS = 0x04 | 0x00;
-+    system_time_wait_ms( 1000 );
-+    PFS->P210PFS = 0x04 | 0x01;
-+    PFS->P410PFS = 0x04 | 0x00;
-+    system_time_wait_ms( 500 );
-+    PFS->P410PFS = 0x04 | 0x01;
-+#elif (BOARD_TYPE_EVK_TOKYOCOM  == 2)
-+    R_SYS_RegisterProtectDisable(SYSTEM_REG_PROTECT_MPC);
-+    PFS->P208PFS = 0x04 | 0x01;
-+    system_time_wait_ms( 500 );
-+    PFS->P208PFS = 0x04 | 0x00;
-+    system_time_wait_ms( 1000 );
-+#endif
++//char wifi_result_str_buffer[160];
  
 -    // Switch LED 2 ON for each received downlink
 -    GpioWrite( &Led2, 0 );
@@ -9494,63 +9532,37 @@ index 5e9ec61..997b132 100644
 -* @return       None.
 -***********************************************************************************************************************/
 -static void MlmeConfirm( MlmeConfirm_t *mlmeConfirm )
--{
++__attribute__ ((section(".ramfunc"))) void tracker_tx()
+ {
 -    switch( mlmeConfirm->MlmeRequest )
 -    {
 -    case MLME_JOIN:
-+#endif
-+    __NOP();
-+    for (;;) {
-+        accel_event_flag = false;
-+        rtc_global_count =0;
-+        system_lpm_wait_rtc(); // SSTBY wait
-+        break;
-+        __NOP();
-+        if (accel_event_flag == true) {
-+#if (BOARD_TYPE_EVK_TOKYOCOM == 1)
-+			if (((int32_t)rtc_read_current_binary_time() - last_accel_event_count) < (int32_t)IRQ_INT_MINUMIM_INTERVAL) {
-+				continue;
-+			}
-+#endif
-+			break;
-+		}
-+    }
-+    __NOP();
-+    last_accel_event_count = (int32_t)rtc_read_current_binary_time();
-+    //  DCDC_n();
-+#if (DEBUG_LED == 1)
-+#if (BOARD_TYPE_EVK_TOKYOCOM  == 1)
-+    R_SYS_RegisterProtectDisable(SYSTEM_REG_PROTECT_MPC);
-+    PFS->P210PFS = 0x04 | 0x00;
-+    PFS->P410PFS = 0x04 | 0x00;
-+    system_time_wait_ms( 1000 );
-+    PFS->P210PFS = 0x04 | 0x01;
-+    PFS->P410PFS = 0x04 | 0x01;
-+#elif (BOARD_TYPE_EVK_TOKYOCOM  == 2)
-+    R_SYS_RegisterProtectDisable(SYSTEM_REG_PROTECT_MPC);
-+    PFS->P208PFS = 0x04 | 0x01;
-+    system_time_wait_ms( 1000 );
-+    PFS->P208PFS = 0x04 | 0x00;
-+    system_time_wait_ms( 1000 );
-+#endif
-+#endif
-+}
++//    uint32_t last_agt_count;
  
 -        if( mlmeConfirm->Status == LORAMAC_EVENT_INFO_STATUS_OK )
 -        {
 -            MibRequestConfirm_t mibGet;
++    int8_t nb_sat_assist;
++    int8_t nb_sat_autonomus;
++    int16_t retry_count;
  
 -            mibGet.Type = MIB_DEV_ADDR;
 -            LoRaMacMibGetRequestConfirm( &mibGet );
++    last_accel_event_count = (int32_t)rtc_read_current_binary_time() - (int32_t)IRQ_INT_MINUMIM_INTERVAL;
  
 -            mibGet.Type = MIB_CHANNELS_DATARATE;
 -            LoRaMacMibGetRequestConfirm( &mibGet );
++#if (BOARD_TYPE_EVK_TOKYOCOM  == 2)
++    int         wsi_ret;
++    signed int  wsi_temp,wsi_humi;
++	lr1110_radio_pkt_status_lora_t pkt_status;
++	int8_t wsc_rssi_pkt_in_dbm;         //!< Average RSSI over last received packet.
  
 -            /* Status is OK, node has joined the network */
 -            DeviceState = DEVICE_STATE_SEND;
 -        }
 -        break;
- 
+-
 -    case MLME_LINK_CHECK:
 -        if( mlmeConfirm->Status == LORAMAC_EVENT_INFO_STATUS_OK )
 -        {
@@ -9564,8 +9576,7 @@ index 5e9ec61..997b132 100644
 -            }
 -        }
 -        break;
-+//char wifi_result_str_buffer[160];
- 
+-
 -    default:
 -        break;
 -    }
@@ -9580,24 +9591,19 @@ index 5e9ec61..997b132 100644
 -* @return       None.
 -***********************************************************************************************************************/
 -static void MlmeIndication( MlmeIndication_t *mlmeIndication )
-+__attribute__ ((section(".ramfunc"))) void tracker_tx()
- {
+-{
 -    switch( mlmeIndication->MlmeIndication )
 -    {
 -    case MLME_SCHEDULE_UPLINK:
 -        /* The MAC signals that we shall provide an uplink as soon as possible */
 -        OnTxNextPacketTimerEvent( NULL );
 -        break;
-+//    uint32_t last_agt_count;
- 
+-
 -    default:
 -        break;
 -    }
 -} /* End of function MlmeIndication */
-+    int8_t nb_sat_assist;
-+    int8_t nb_sat_autonomus;
-+    int16_t retry_count;
- 
+-
 -/*******************************************************************************************************************//**
 -* @fn           OnMacProcessNotify()
 -* @brief        Function to notify the MAC Process.
@@ -9613,7 +9619,7 @@ index 5e9ec61..997b132 100644
 -    {
 -        return;
 -    }
--#endif
+ #endif
 -    /* When TxDone is set, LoRaMAC will process RX1 window to receive a possible downlink packet */
 -    if ( LoRaMacRadioEvents.Events.TxDone )
 -    {
@@ -9646,8 +9652,7 @@ index 5e9ec61..997b132 100644
 -        LoRaComStage = LORA_COM_STAGE_IDLE;
 -    }
 -} /* End of function OnMacProcessNotify */
-+    last_accel_event_count = (int32_t)rtc_read_current_binary_time() - (int32_t)IRQ_INT_MINUMIM_INTERVAL;
- 
+-
 -/*******************************************************************************************************************//**
 -* @fn           app_run()
 -* @brief        Main application routine. Configure->Read->Send->STBBY
@@ -9666,11 +9671,6 @@ index 5e9ec61..997b132 100644
 -    {
 -        Radio.IrqProcess( );
 -    }
-+#if (BOARD_TYPE_EVK_TOKYOCOM  == 2)
-+    int         wsi_ret;
-+    signed int  wsi_temp,wsi_humi;
-+	lr1110_radio_pkt_status_lora_t pkt_status;
-+	int8_t wsc_rssi_pkt_in_dbm;         //!< Average RSSI over last received packet.
  
 -    /* Processes the LoRaMac events */
 -    LoRaMacProcess( );
@@ -9683,12 +9683,6 @@ index 5e9ec61..997b132 100644
 -        /* Tell the MAC layer which network server version are we connecting too. */
 -        mibReq.Type = MIB_ABP_LORAWAN_VERSION;
 -        mibReq.Param.AbpLrWanVersion.Value = ABP_ACTIVATION_LRWAN_VERSION;
--        LoRaMacMibSetRequestConfirm( &mibReq );
- #endif
- 
--#if( ABP_ACTIVATION_LRWAN_VERSION == ABP_ACTIVATION_LRWAN_VERSION_V10x )
--        mibReq.Type = MIB_GEN_APP_KEY;
--        mibReq.Param.GenAppKey = GenAppKey;
 -        LoRaMacMibSetRequestConfirm( &mibReq );
 +    //  last_assist_date_count = 0;
 +    assist_data_valid_flag = false;
@@ -9728,7 +9722,12 @@ index 5e9ec61..997b132 100644
 +            //          APP_ERR_RETURN(-1);
 +            //      battery_voltage = 3.3;
 +        }
-+#endif
+ #endif
+-
+-#if( ABP_ACTIVATION_LRWAN_VERSION == ABP_ACTIVATION_LRWAN_VERSION_V10x )
+-        mibReq.Type = MIB_GEN_APP_KEY;
+-        mibReq.Param.GenAppKey = GenAppKey;
+-        LoRaMacMibSetRequestConfirm( &mibReq );
  #else
 -        mibReq.Type = MIB_APP_KEY;
 -        mibReq.Param.AppKey = AppKey;
@@ -9981,8 +9980,8 @@ index 5e9ec61..997b132 100644
 +        R_SYS_RegisterProtectDisable(SYSTEM_REG_PROTECT_MPC);
 +        PFS->P210PFS = 0x04 | 0x01;
 +        PFS->P410PFS = 0x04 | 0x01;
- #endif
 +#endif
+ #endif
 +        system_time_wait_ms( 100 );
 +    }
 +}
@@ -10192,7 +10191,7 @@ index 5e9ec61..997b132 100644
 -        TimerStart( &TxNextPacketTimer );
 -        break;
 -    }
--
+ 
 -    case DEVICE_STATE_SLEEP:
 -    {
 -        if (LORA_COM_STAGE_IDLE != LoRaComStage)
@@ -10230,7 +10229,7 @@ index 5e9ec61..997b132 100644
 -
 -    sprintf(sense_buf, "\r\nbat:%d\r\n", sensor->grp1.batteryLevel);
 -    print(sense_buf);
- 
+-
 -    sprintf(sense_buf, "tmp:%d\r\n", sensor->grp1.temperature);
 -    print(sense_buf);
 +#if SEND_TO_SERVER
@@ -10596,6 +10595,9 @@ index 5e9ec61..997b132 100644
 -    /* Update LCD display.*/
 -    lcd_open_not_int(MAIN_PRV_FREQUENCY_LOCO_KHZ);
 -    lcd_send_not_int((const uint8_t *)g_bitmap_shutdown_data, MAIN_PRV_FREQUENCY_LOCO_KHZ); /* cast to const */
+-
+-    /* Wait to keep LCD */
+-    R_SYS_SoftwareDelay(MAIN_PRV_LCD_KEEP_TIME_MS, SYSTEM_DELAY_UNITS_MILLISECONDS);
 +			calc_CRC = CRC8_calc(bulk_receive_buffer + 6, UNIT_BINARY_SIZE);
 +			if (calc_CRC != receive_CRC )
 +			{
@@ -10620,17 +10622,17 @@ index 5e9ec61..997b132 100644
 +//	uart_fifo_send_string(&uart0_dev, "ACK FINISH_UPDATE\n");
 +}
  
--    /* Wait to keep LCD */
--    R_SYS_SoftwareDelay(MAIN_PRV_LCD_KEEP_TIME_MS, SYSTEM_DELAY_UNITS_MILLISECONDS);
- 
 -    lcd_off_not_int(MAIN_PRV_FREQUENCY_LOCO_KHZ);
-+volatile int8_t i2c_simple_channel;
  
 -    /* LED off. */
 -    board_led_off();
++volatile int8_t i2c_simple_channel;
  
 -    /* Turn on the function to prevent the propagation of indeterminate values. */
 -    R_LPM_IOPowerSupplyModeSet(LPM_IOPOWER_SUPPLY_ALL);
+ 
+-    /* Turn Off DCDC on Evaluation Kit. */
+-    ext_power_off();
 +static int8_t read_hs300x()
 +{    
 +	int8_t ret;
@@ -10639,8 +10641,8 @@ index 5e9ec61..997b132 100644
 +    APP_ERR_RETURN(ret);
 +	} else {
  
--    /* Turn Off DCDC on Evaluation Kit. */
--    ext_power_off();
+-    return;
+-} /* End of function lvd_callback */
 +    R_SYS_SoftwareDelay(100, SYSTEM_DELAY_UNITS_MILLISECONDS); /* Wait for the measurement ready */
 +    ret = hs300x_data_fetch(&hs300x_data);
 +    if (ret) {
@@ -10651,9 +10653,6 @@ index 5e9ec61..997b132 100644
 +    return ret;
 +}
  
--    return;
--} /* End of function lvd_callback */
- 
 -/*******************************************************************************************************************//**
 -* @fn           board_led_off()
 -* @brief        This function turn off LED on Evaluation Kit.
@@ -10661,10 +10660,7 @@ index 5e9ec61..997b132 100644
 -* @return       None.
 -***********************************************************************************************************************/
 -static void board_led_off (void)
-+int semtech_main( void )
- {
-+    int ic;
-+    lr1110_system_version_t version;
+-{
  
 -    /*----------------------------------------------------------------------
 -     * PODR register - Port Control Register 1
@@ -10684,7 +10680,8 @@ index 5e9ec61..997b132 100644
 -* @return       None.
 -***********************************************************************************************************************/
 -static void ext_power_off (void)
--{
++int semtech_main( void )
+ {
 -    /* Write user's code to turn OFF other user's power control device in this function. */
 -    /* Pre-processing of DCDC converter control. : Do nothing in this sample code        */
 -    /* Activates the shut off operation of the power domains powered by DCDC.             */
@@ -10692,7 +10689,9 @@ index 5e9ec61..997b132 100644
 -    {
 -        main_error();
 -    }
--
++    int ic;
++    lr1110_system_version_t version;
+ 
 -    /* Power off DCDC converter. */
 -    /*----------------------------------------------------------------------
 -     * PODR register - Port Control Register 1
